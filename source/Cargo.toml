@@ -1,5 +1,5 @@
 [package]
-name = "source"
+name = "high_frequency_order_book"
 version = "0.1.0"
 authors = ["Brett Fazio <brett.fazio@hotmail.com>"]
 edition = "2018"
