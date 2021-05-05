@@ -28,10 +28,10 @@ pub mod types {
     pub fn is_ask(s: Side) -> bool { return s; }
 
     pub struct Order {
-        symbol: String,
-        trader: String,
-        side: Side,
-        price: Price,
-        size: Size,
+        pub symbol: String,
+        pub trader: String,
+        pub side: Side,
+        pub price: Price,
+        pub size: Size,
     }
 }
