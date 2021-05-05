@@ -3,11 +3,12 @@
 */
 
 use std::collections::LinkedList;
+use std::vec::Vec;
 use crate::types::types::{Price, Order};
 
 pub struct Engine {
-    pub bids: LinkedList<Order>,
-    pub asks: LinkedList<Order>,
+    pub bids: Vec<Order>,
+    pub asks: Vec<Order>,
     pub id: u32,
 }
 
@@ -22,8 +23,20 @@ impl Engine {
         return ask <= bid;
     }
 
-    fn trade(&mut self, order: &mut Order, matched_order: &mut Order, book: &LinkedList<Order>) {
+    fn trade(order: &mut Order, matched_order: &mut Order) {
+        // Send to execution report now.
 
+        // Completely fill matched
+        if order.size >= matched_order.size {
+            order.size -= matched_order.size;
+            // Removed via retain operation in cross
+            matched_order.size = 0;
+        }
+        // New order completely filled.
+        else {
+            matched_order.size -= order.size;
+            order.size = 0;
+        }
     }
 
     fn cross(&mut self, order: &mut Order) -> bool {
@@ -31,20 +44,17 @@ impl Engine {
         let book = if isask { &mut self.bids } else { &mut self.asks };
         let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
 
-        let mut book_iter = book.iter_mut();
-        let mut next = &mut book_iter.next();
-        while !next.is_none() && cross_test(order.price, next.as_ref().unwrap().price) {
-            self.trade(order, next.unwrap(), book);
-
-            // Executed whole trade.
-            if order.size == 0 {
-                return true;
+        for (index, matched_order) in book.iter_mut().enumerate() {
+            if !cross_test(order.price, matched_order.price) {
+                break;
             }
 
-            next = &mut book_iter.next();
+            Engine::trade(order, matched_order);
         }
 
-        false
+        book.retain(|x| x.size > 0);
+
+        order.size == 0
     }
 
     fn queue(&self, order: &mut Order) -> bool {
@@ -52,7 +62,7 @@ impl Engine {
         false
     }
 
-    pub fn limit_order(&self, order: &mut Order) {
+    pub fn limit_order(&mut self, order: &mut Order) {
         // Cross off as many shares as possible.
         if !self.cross(order) {
             // Queue order if all shares not crossed off.
