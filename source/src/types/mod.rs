@@ -27,6 +27,7 @@ pub mod types {
     pub type Side = bool;
     pub fn is_ask(s: Side) -> bool { return s; }
 
+    #[derive(Clone)]
     pub struct Order {
         pub symbol: String,
         pub trader: String,

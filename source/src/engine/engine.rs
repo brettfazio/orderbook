@@ -6,21 +6,35 @@ use std::collections::LinkedList;
 use std::vec::Vec;
 use crate::types::types::{Price, Order};
 
+struct OrderIn {
+    order: Order,
+    id: u32,
+}
+
 pub struct Engine {
-    pub bids: Vec<Order>,
-    pub asks: Vec<Order>,
-    pub id: u32,
+    bids: Vec<OrderIn>,
+    asks: Vec<OrderIn>,
+    id: u32,
 }
 
 impl Engine {
 
-    // Helpers
+    // Helpers for cross
     fn hit_ask(bid: Price, ask: Price) -> bool {
         return bid >= ask;
     }
 
     fn hit_bid(ask: Price, bid: Price) -> bool {
         return ask <= bid;
+    }
+
+    // Helpers for queue
+    fn priority_ask(ask_new: Price, ask_old: Price) -> bool {
+        return ask_new < ask_old;
+    }
+
+    fn priority_bid(bid_new: Price, bid_old: Price) -> bool {
+        return bid_new > bid_old;
     }
 
     fn trade(order: &mut Order, matched_order: &mut Order) {
@@ -45,21 +59,30 @@ impl Engine {
         let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
 
         for (index, matched_order) in book.iter_mut().enumerate() {
-            if !cross_test(order.price, matched_order.price) {
+            if !cross_test(order.price, matched_order.order.price) {
                 break;
             }
 
-            Engine::trade(order, matched_order);
+            Engine::trade(order, &mut matched_order.order);
         }
 
-        book.retain(|x| x.size > 0);
+        book.retain(|x| x.order.size > 0);
 
         order.size == 0
     }
 
-    fn queue(&self, order: &mut Order) -> bool {
+    fn queue(&mut self, order: &mut Order) {
+        let isask = order.side;
+        let book = if isask { &mut self.asks } else { &mut self.bids };
+        let cross_test = if isask { Engine::priority_ask } else { Engine::priority_bid };
 
-        false
+        let insertion_index = match book.iter().enumerate().find(|(index, ele)| cross_test(order.price, ele.order.price)).unwrap() {
+            (a, b) => a,
+            _ => book.len(),
+        };
+                            
+        let new_order = OrderIn { order: order.clone(), id: self.id };
+        book.insert(insertion_index, new_order);
     }
 
     pub fn limit_order(&mut self, order: &mut Order) {
