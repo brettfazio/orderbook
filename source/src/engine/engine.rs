@@ -4,17 +4,17 @@
 
 use std::collections::LinkedList;
 use std::vec::Vec;
-use crate::types::types::{Price, Order};
+use crate::types::types::{Price, Order, OrderId};
 
 struct OrderIn {
     order: Order,
-    id: u32,
+    id: OrderId,
 }
 
 pub struct Engine {
     bids: Vec<OrderIn>,
     asks: Vec<OrderIn>,
-    id: u32,
+    id: OrderId,
 }
 
 impl Engine {
@@ -85,7 +85,7 @@ impl Engine {
         book.insert(insertion_index, new_order);
     }
 
-    pub fn limit_order(&mut self, order: &mut Order) -> u32 {
+    pub fn limit_order(&mut self, order: &mut Order) -> OrderId {
         // Cross off as many shares as possible.
         if !self.cross(order) {
             // Queue order if all shares not crossed off.
