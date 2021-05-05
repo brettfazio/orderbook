@@ -85,12 +85,20 @@ impl Engine {
         book.insert(insertion_index, new_order);
     }
 
-    pub fn limit_order(&mut self, order: &mut Order) {
+    pub fn limit_order(&mut self, order: &mut Order) -> u32 {
         // Cross off as many shares as possible.
         if !self.cross(order) {
             // Queue order if all shares not crossed off.
             self.queue(order);
         }
+        let return_id = self.id;
+        self.id += 1;
+        return_id
+    }
+
+    pub fn cancel(&mut self, order_in: OrderIn) {
+        self.asks.retain(|x| x.id != order_in.id);
+        self.bids.retain(|x| x.id != order_in.id);
     }
 
 }
