@@ -4,7 +4,7 @@
 
 use std::collections::LinkedList;
 use std::vec::Vec;
-use crate::types::types::{Price, Order, OrderId};
+use crate::types::types::{Price, Order, OrderId, Execution};
 
 struct OrderIn {
     order: Order,
@@ -15,6 +15,7 @@ pub struct Engine {
     bids: Vec<OrderIn>,
     asks: Vec<OrderIn>,
     id: OrderId,
+    execution_callback: fn(exec: &Execution),
 }
 
 impl Engine {
@@ -37,8 +38,22 @@ impl Engine {
         return bid_new > bid_old;
     }
 
-    fn trade(order: &mut Order, matched_order: &mut Order) {
+    fn send_execution(order_1: &Order, order_2: &Order, cb: fn(&Execution)) {
+        let mut exec = order_1.clone();
+
+        // Call callback now
+        (cb)(&exec);
+
+        exec.trader = order_2.trader.clone();
+        exec.side = !exec.side;
+
+        // Callback for otherside of trade
+        (cb)(&exec);
+    }
+
+    fn trade(order: &mut Order, matched_order: &mut Order, cb: fn(&Execution)) {
         // Send to execution report now.
+        Engine::send_execution(order, matched_order, cb);
 
         // Completely fill matched
         if order.size >= matched_order.size {
@@ -57,13 +72,14 @@ impl Engine {
         let isask = order.side;
         let book = if isask { &mut self.bids } else { &mut self.asks };
         let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
+        let cb = self.execution_callback;
 
         for (index, matched_order) in book.iter_mut().enumerate() {
             if !cross_test(order.price, matched_order.order.price) {
                 break;
             }
 
-            Engine::trade(order, &mut matched_order.order);
+            Engine::trade(order, &mut matched_order.order, cb);
         }
 
         book.retain(|x| x.order.size > 0);

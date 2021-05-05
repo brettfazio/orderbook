@@ -35,4 +35,6 @@ pub mod types {
         pub price: Price,
         pub size: Size,
     }
+
+    pub type Execution = Order;
 }
