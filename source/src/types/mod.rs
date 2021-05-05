@@ -17,25 +17,17 @@ t_order
 t_execution
     Execution report sent to trader informing them of the symbol, side, price, and size of the transaction.
 */
-pub mod orderid {
-    type OrderId = u64;
-}
+pub mod types {
+    pub type OrderId = u64;
 
-pub mod price {
-    type Price = u16;
-}
+    pub type Price = u16;
 
-pub mod size {
-    type Size = u64;
-}
+    pub type Size = u64;
 
-pub mod side {
-    type Side = bool;
-    fn is_ask(s: Side) -> bool { return s; }
-}
+    pub type Side = bool;
+    pub fn is_ask(s: Side) -> bool { return s; }
 
-pub mod order {
-    struct Order {
+    pub struct Order {
         symbol: String,
         trader: String,
         side: Side,
