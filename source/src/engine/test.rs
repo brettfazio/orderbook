@@ -3,7 +3,7 @@
 mod engine_tests {
 
     use crate::types::types::{Order, OrderId, Execution};
-    use crate::engine::engine::Engine;
+    use crate::engine::engine::{Engine, OrderIn};
 
     struct TestState {
         order_id: OrderId,
@@ -25,6 +25,12 @@ mod engine_tests {
                 self.order_id += 1;
 
                 assert_eq!(id, self.order_id);
+            }
+        }
+
+        fn feed_cancels(&mut self, cancels: Vec<OrderIn>) {
+            for cancel in cancels {
+                self.engine.cancel(cancel);
             }
         }
 
@@ -62,6 +68,10 @@ mod engine_tests {
         state.feed_orders(&mut orders);
         state.verify_exec_count(execs.len());
         state.verify_exec_log(&execs);
+    }
+
+    fn test_cancel(mut orders_1: Vec<Order>, cancels: Vec<OrderIn>, mut orders_2: Vec<Order>, execs: Vec<Execution>) {
+
     }
  
     #[test]
