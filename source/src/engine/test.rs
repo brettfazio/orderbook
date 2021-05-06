@@ -29,12 +29,13 @@ mod engine_tests {
         }
 
         fn verify_exec_count(&self, expected_count: usize) {
-            assert_eq!(self.engine.execution_log.len(), expected_count);
+            assert_eq!(self.engine.execution_log.len(), expected_count,
+                        "Expected exec log size of {}, real was {}", expected_count, self.engine.execution_log.len());
         }
 
         fn verify_exec_log(&self, expected_log: &Vec<Order>) {
             for (real, expect) in self.engine.execution_log.iter().zip(expected_log.iter()) {
-                assert_eq!(real == expect, true, "Testing the equality of {} and {}", real, expect);
+                assert_eq!(real == expect, true, "Testing the equality of real {} and expected {}", real, expect);
             }
         }
 
