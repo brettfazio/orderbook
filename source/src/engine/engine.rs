@@ -63,7 +63,7 @@ impl Engine {
 
     fn trade(order: &mut Order, matched_order: &mut Order, log: &mut Vec<Execution>) {
         // Send to execution report now.
-        Engine::send_execution(order, matched_order, log);
+        Engine::send_execution(&order.clone(), &matched_order.clone(), log);
 
         // Completely fill matched
         if order.size >= matched_order.size {
@@ -85,11 +85,14 @@ impl Engine {
         let log = &mut self.execution_log;
 
         for matched_order in book.iter_mut() {
+            if order.size == 0 {
+                break;
+            }
             if !cross_test(order.price, matched_order.order.price) {
                 break;
             }
 
-            Engine::trade(order, &mut matched_order.order, log);
+            Engine::trade(order, &mut matched_order.order, log);            
         }
 
         book.retain(|x| x.order.size > 0);

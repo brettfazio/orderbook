@@ -123,4 +123,16 @@ mod engine_tests {
         test(vec![oa101x100, ob101x25.clone(), ob101x25.clone(), ob101x25.clone(), ob101x25.clone(), ob101x25.clone()], 
             vec![xa101x25.clone(), xb101x25.clone(), xa101x25.clone(), xb101x25.clone(), xa101x25.clone(), xb101x25.clone(), xa101x25.clone(), xb101x25.clone()]);
     }
+
+    #[test]
+    fn test_position() {
+        let ob101x25x: Order = Order {symbol: String::from("JPM"), trader: String::from("BRETT"), side: false, price: 101, size: 25};
+        let oa101x25: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 25};
+        let ob101x25: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 25};
+
+        let xa101x25: Execution = oa101x25.clone();
+        let xb101x25x: Execution = ob101x25x.clone();
+
+        test(vec![ob101x25x, ob101x25, oa101x25], vec![xa101x25, xb101x25x])
+    }
 }
