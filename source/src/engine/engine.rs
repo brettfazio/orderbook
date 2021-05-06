@@ -125,9 +125,9 @@ impl Engine {
         return_id
     }
 
-    pub fn cancel(&mut self, order_in: OrderIn) {
-        self.asks.retain(|x| x.id != order_in.id);
-        self.bids.retain(|x| x.id != order_in.id);
+    pub fn cancel(&mut self, id: OrderId) {
+        self.asks.retain(|x| x.id != id);
+        self.bids.retain(|x| x.id != id);
     }
 
 }

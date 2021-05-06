@@ -28,7 +28,7 @@ mod engine_tests {
             }
         }
 
-        fn feed_cancels(&mut self, cancels: Vec<OrderIn>) {
+        fn feed_cancels(&mut self, cancels: Vec<OrderId>) {
             for cancel in cancels {
                 self.engine.cancel(cancel);
             }
@@ -70,7 +70,14 @@ mod engine_tests {
         state.verify_exec_log(&execs);
     }
 
-    fn test_cancel(mut orders_1: Vec<Order>, cancels: Vec<OrderIn>, mut orders_2: Vec<Order>, execs: Vec<Execution>) {
+    fn test_cancel(mut orders_1: Vec<Order>, cancels: Vec<OrderId>, mut orders_2: Vec<Order>, execs: Vec<Execution>) {
+        let mut state = TestState::new();
+
+        state.feed_orders(&mut orders_1);
+        state.feed_cancels(cancels);
+        state.feed_orders(&mut orders_2);
+        state.verify_exec_count(execs.len());
+        state.verify_exec_log(&execs);
 
     }
  
@@ -144,5 +151,13 @@ mod engine_tests {
         let xb101x25x: Execution = ob101x25x.clone();
 
         test(vec![ob101x25x, ob101x25, oa101x25], vec![xa101x25, xb101x25x])
+    }
+
+    #[test]
+    fn test_cancel_no_exec() {
+        let oa101x25: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 25};
+        let ob101x25: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 25};
+
+        test_cancel(vec![oa101x25], vec![1], vec![ob101x25], vec![]);
     }
 }
