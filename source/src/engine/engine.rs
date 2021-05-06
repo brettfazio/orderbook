@@ -4,6 +4,7 @@
 
 use std::collections::LinkedList;
 use std::vec::Vec;
+use core::cmp::min;
 use crate::types::types::{Price, Order, OrderId, Execution};
 
 struct OrderIn {
@@ -51,6 +52,7 @@ impl Engine {
 
     fn send_execution(order_1: &Order, order_2: &Order, log: &mut Vec<Execution>) {
         let mut exec = order_1.clone();
+        exec.size = min(order_1.size, order_2.size);
 
         // Call callback now
         log.push(exec.clone());
