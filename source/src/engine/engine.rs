@@ -2,12 +2,11 @@
     Most basic implementation of matching engine.
 */
 
-use std::collections::LinkedList;
 use std::vec::Vec;
 use core::cmp::min;
 use crate::types::types::{Price, Order, OrderId, Execution};
 
-struct OrderIn {
+pub struct OrderIn {
     order: Order,
     id: OrderId,
 }
@@ -87,7 +86,7 @@ impl Engine {
         let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
         let log = &mut self.execution_log;
 
-        for (index, matched_order) in book.iter_mut().enumerate() {
+        for matched_order in book.iter_mut() {
             if !cross_test(order.price, matched_order.order.price) {
                 break;
             }
@@ -105,8 +104,8 @@ impl Engine {
         let book = if isask { &mut self.asks } else { &mut self.bids };
         let cross_test = if isask { Engine::priority_ask } else { Engine::priority_bid };
 
-        let insertion_index = match book.iter().enumerate().find(|(index, ele)| cross_test(order.price, ele.order.price)) {
-            Some((a, b)) => a,
+        let insertion_index = match book.iter().enumerate().find(|(_index, ele)| cross_test(order.price, ele.order.price)) {
+            Some((a, _)) => a,
             _ => book.len(),
         };
                             

@@ -30,7 +30,7 @@ mod engine_tests {
 
         fn verify_exec_count(&self, expected_count: usize) {
             assert_eq!(self.engine.execution_log.len(), expected_count,
-                        "Expected exec log size of {}, real was {}", expected_count, self.engine.execution_log.len());
+                        "Expected execution log size of {}, real was {}", expected_count, self.engine.execution_log.len());
         }
 
         // Pre condition: expected_log.len() == self.engine.execution_log.len()
@@ -85,5 +85,42 @@ mod engine_tests {
         let xb101x100: Execution = ob101x100.clone();
 
         test(vec![oa101x100, ob101x100], vec![xa101x100, xb101x100]);
+    }
+
+    #[test]
+    fn test_partial_ask_fill() {
+        let oa101x100: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 100};
+        let oa101x50: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 50};
+        let ob101x50: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 50};
+
+        let xa101x50: Execution = oa101x50.clone();
+        let xb101x50: Execution = ob101x50.clone();
+
+        test(vec![oa101x100, ob101x50], vec![xa101x50, xb101x50]);
+    }
+
+    #[test]
+    fn test_partial_bid_fill() {
+        let ob101x100: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 100};
+        let oa101x50: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 50};
+        let ob101x50: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 50};
+
+        let xa101x50: Execution = oa101x50.clone();
+        let xb101x50: Execution = ob101x50.clone();
+
+        test(vec![oa101x50, ob101x100], vec![xa101x50, xb101x50]);
+    }
+
+    #[test]
+    fn test_increment_over_fill() {
+        let oa101x100: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 100};
+        let oa101x25: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 25};
+        let ob101x25: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 25};
+
+        let xa101x25: Execution = oa101x25.clone();
+        let xb101x25: Execution = ob101x25.clone();
+
+        test(vec![oa101x100, ob101x25.clone(), ob101x25.clone(), ob101x25.clone(), ob101x25.clone(), ob101x25.clone()], 
+            vec![xa101x25.clone(), xb101x25.clone(), xa101x25.clone(), xb101x25.clone(), xa101x25.clone(), xb101x25.clone(), xa101x25.clone(), xb101x25.clone()]);
     }
 }
