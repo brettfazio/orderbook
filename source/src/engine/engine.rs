@@ -15,17 +15,19 @@ pub struct Engine {
     bids: Vec<OrderIn>,
     asks: Vec<OrderIn>,
     id: OrderId,
-    execution_callback: fn(exec: &Execution),
+    //execution_callback: fn(exec: &Execution),
+    pub execution_log: Vec<Execution>,
 }
 
 impl Engine {
 
-    pub fn new(callback: fn(exec: &Execution)) -> Engine {
+    pub fn new() -> Engine {
         Engine {
             bids: Vec::<OrderIn>::new(),
             asks: Vec::<OrderIn>::new(),
-            id: 0,
-            execution_callback: callback,
+            id: 1,
+            //execution_callback: callback,
+            execution_log: Vec::new(),
         }
     }
     
@@ -47,22 +49,22 @@ impl Engine {
         return bid_new > bid_old;
     }
 
-    fn send_execution(order_1: &Order, order_2: &Order, cb: fn(&Execution)) {
+    fn send_execution(order_1: &Order, order_2: &Order, log: &mut Vec<Execution>) {
         let mut exec = order_1.clone();
 
         // Call callback now
-        (cb)(&exec);
+        log.push(exec.clone());
 
         exec.trader = order_2.trader.clone();
         exec.side = !exec.side;
 
         // Callback for otherside of trade
-        (cb)(&exec);
+        log.push(exec.clone());
     }
 
-    fn trade(order: &mut Order, matched_order: &mut Order, cb: fn(&Execution)) {
+    fn trade(order: &mut Order, matched_order: &mut Order, log: &mut Vec<Execution>) {
         // Send to execution report now.
-        Engine::send_execution(order, matched_order, cb);
+        Engine::send_execution(order, matched_order, log);
 
         // Completely fill matched
         if order.size >= matched_order.size {
@@ -81,14 +83,14 @@ impl Engine {
         let isask = order.side;
         let book = if isask { &mut self.bids } else { &mut self.asks };
         let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
-        let cb = self.execution_callback;
+        let log = &mut self.execution_log;
 
         for (index, matched_order) in book.iter_mut().enumerate() {
             if !cross_test(order.price, matched_order.order.price) {
                 break;
             }
 
-            Engine::trade(order, &mut matched_order.order, cb);
+            Engine::trade(order, &mut matched_order.order, log);
         }
 
         book.retain(|x| x.order.size > 0);
@@ -101,8 +103,8 @@ impl Engine {
         let book = if isask { &mut self.asks } else { &mut self.bids };
         let cross_test = if isask { Engine::priority_ask } else { Engine::priority_bid };
 
-        let insertion_index = match book.iter().enumerate().find(|(index, ele)| cross_test(order.price, ele.order.price)).unwrap() {
-            (a, b) => a,
+        let insertion_index = match book.iter().enumerate().find(|(index, ele)| cross_test(order.price, ele.order.price)) {
+            Some((a, b)) => a,
             _ => book.len(),
         };
                             
