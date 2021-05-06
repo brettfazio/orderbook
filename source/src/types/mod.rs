@@ -1,4 +1,8 @@
+
+
 pub mod types {
+    use std::fmt;
+
     pub type OrderId = u64;
 
     pub type Price = u16;
@@ -28,6 +32,12 @@ pub mod types {
     }
 
     impl Eq for Order { }
+
+    impl fmt::Display for Order {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "(${} from {}. {} {}x{})", self.symbol, self.trader, if self.side {"ask"} else {"bid"}, self.price, self.size)
+        }
+    }
 
     pub type Execution = Order;
 }

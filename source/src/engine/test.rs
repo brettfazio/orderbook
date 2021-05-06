@@ -34,7 +34,7 @@ mod engine_tests {
 
         fn verify_exec_log(&self, expected_log: &Vec<Order>) {
             for (real, expect) in self.engine.execution_log.iter().zip(expected_log.iter()) {
-                assert_eq!(real == expect, true);
+                assert_eq!(real == expect, true, "Testing the equality of {} and {}", real, expect);
             }
         }
 
@@ -55,8 +55,19 @@ mod engine_tests {
     }
 
     #[test]
-    fn it_works() {
-        
-        assert_eq!(2 + 2, 4);
+    fn test_bid() {
+        let ob101x100: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 100};
+        test(vec![ob101x100], vec![]);
+    }
+
+    #[test]
+    fn test_basic_exec() {
+        let oa101x100: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: true, price: 101, size: 100};
+        let ob101x100: Order = Order {symbol: String::from("JPM"), trader: String::from("MAX"), side: false, price: 101, size: 100};
+
+        let xa101x100: Execution = oa101x100.clone();
+        let xb101x100: Execution = ob101x100.clone();
+
+        test(vec![oa101x100, ob101x100], vec![xa101x100, xb101x100]);
     }
 }
