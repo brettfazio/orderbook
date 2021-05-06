@@ -20,6 +20,15 @@ pub struct Engine {
 
 impl Engine {
 
+    pub fn new(callback: fn(exec: &Execution)) -> Engine {
+        Engine {
+            bids: Vec::<OrderIn>::new(),
+            asks: Vec::<OrderIn>::new(),
+            id: 0,
+            execution_callback: callback,
+        }
+    }
+    
     // Helpers for cross
     fn hit_ask(bid: Price, ask: Price) -> bool {
         return bid >= ask;
