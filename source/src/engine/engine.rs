@@ -4,7 +4,7 @@
 
 use std::vec::Vec;
 use core::cmp::min;
-use crate::types::types::{Price, Order, OrderId, Execution};
+use crate::types::types::{Price, Order, OrderId, Execution, is_ask};
 
 pub struct OrderIn {
     order: Order,
@@ -15,7 +15,6 @@ pub struct Engine {
     bids: Vec<OrderIn>,
     asks: Vec<OrderIn>,
     id: OrderId,
-    //execution_callback: fn(exec: &Execution),
     pub execution_log: Vec<Execution>,
 }
 
@@ -26,7 +25,6 @@ impl Engine {
             bids: Vec::<OrderIn>::new(),
             asks: Vec::<OrderIn>::new(),
             id: 1,
-            //execution_callback: callback,
             execution_log: Vec::new(),
         }
     }
@@ -81,7 +79,7 @@ impl Engine {
     }
 
     fn cross(&mut self, order: &mut Order) -> bool {
-        let isask = order.side;
+        let isask = is_ask(order.side);
         let book = if isask { &mut self.bids } else { &mut self.asks };
         let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
         let log = &mut self.execution_log;
@@ -100,7 +98,7 @@ impl Engine {
     }
 
     fn queue(&mut self, order: &mut Order) {
-        let isask = order.side;
+        let isask = is_ask(order.side);
         let book = if isask { &mut self.asks } else { &mut self.bids };
         let cross_test = if isask { Engine::priority_ask } else { Engine::priority_bid };
 
