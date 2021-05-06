@@ -33,9 +33,24 @@ mod engine_tests {
                         "Expected exec log size of {}, real was {}", expected_count, self.engine.execution_log.len());
         }
 
+        // Pre condition: expected_log.len() == self.engine.execution_log.len()
         fn verify_exec_log(&self, expected_log: &Vec<Order>) {
-            for (real, expect) in self.engine.execution_log.iter().zip(expected_log.iter()) {
-                assert_eq!(real == expect, true, "Testing the equality of real {} and expected {}", real, expect);
+            let len = expected_log.len();
+            let mut index = 0;
+            
+            while index < len {
+
+                let ordered_case = expected_log[index] == self.engine.execution_log[index] &&
+                            expected_log[index+1] == self.engine.execution_log[index+1];
+                let unordered_case = expected_log[index] == self.engine.execution_log[index+1] &&
+                            expected_log[index+1] == self.engine.execution_log[index];
+
+                assert_eq!(ordered_case || unordered_case, true, 
+                    "Testing the equality of real {} & {} with expected {} & {}",
+                    self.engine.execution_log[index], self.engine.execution_log[index+1],
+                    expected_log[index], expected_log[index+1]);
+
+                index += 2;
             }
         }
 
