@@ -12,8 +12,8 @@ pub struct OrderIn {
 }
 
 pub struct Engine {
-    bids: Vec<OrderIn>,
-    asks: Vec<OrderIn>,
+    pub bids: Vec<OrderIn>,
+    pub asks: Vec<OrderIn>,
     id: OrderId,
     pub execution_log: Vec<Execution>,
     should_log: bool

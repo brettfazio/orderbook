@@ -10,7 +10,8 @@ fn feed(begin: usize, end: usize, engine: &mut Engine, flow: &mut Vec<Order>) {
         if flow[idx].price == 0 {
             engine.cancel(flow[idx].size);
         }else {
-            engine.limit_order(&mut flow[idx]);
+            let mut clone = flow[idx].clone();
+            engine.limit_order(&mut clone);
         }
     }
 }
