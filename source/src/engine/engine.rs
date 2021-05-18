@@ -4,7 +4,7 @@
 
 use std::vec::Vec;
 use core::cmp::min;
-use crate::types::types::{Price, Order, OrderId, Execution, is_ask};
+use crate::types::{Order, Price, OrderId, Execution, is_ask};
 
 pub struct OrderIn {
     order: Order,
