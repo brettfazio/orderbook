@@ -3,7 +3,7 @@
 mod engine_tests {
 
     use crate::types::{Order, OrderId, Execution};
-    use crate::engine::engine::{Engine, OrderIn};
+    use crate::engine::engine::Engine;
 
     struct TestState {
         order_id: OrderId,
@@ -19,9 +19,9 @@ mod engine_tests {
             }
         }
 
-        fn feed_orders(&mut self, orders: &mut Vec<Order>) {
-            for mut order in orders {
-                let id = self.engine.limit_order(&mut order);
+        fn feed_orders(&mut self, orders: Vec<Order>) {
+            for order in orders {
+                let id = self.engine.limit_order(order);
                 self.order_id += 1;
 
                 assert_eq!(id, self.order_id);
@@ -62,20 +62,20 @@ mod engine_tests {
 
     }
 
-    fn test(mut orders: Vec<Order>, execs: Vec<Execution>) {
+    fn test(orders: Vec<Order>, execs: Vec<Execution>) {
         let mut state = TestState::new();
 
-        state.feed_orders(&mut orders);
+        state.feed_orders(orders);
         state.verify_exec_count(execs.len());
         state.verify_exec_log(&execs);
     }
 
-    fn test_cancel(mut orders_1: Vec<Order>, cancels: Vec<OrderId>, mut orders_2: Vec<Order>, execs: Vec<Execution>) {
+    fn test_cancel(orders_1: Vec<Order>, cancels: Vec<OrderId>, orders_2: Vec<Order>, execs: Vec<Execution>) {
         let mut state = TestState::new();
 
-        state.feed_orders(&mut orders_1);
+        state.feed_orders(orders_1);
         state.feed_cancels(cancels);
-        state.feed_orders(&mut orders_2);
+        state.feed_orders(orders_2);
         state.verify_exec_count(execs.len());
         state.verify_exec_log(&execs);
 

@@ -133,11 +133,11 @@ impl Engine {
         book.insert(insertion_index, new_order);
     }
 
-    pub fn limit_order(&mut self, order: &mut Order) -> OrderId {
+    pub fn limit_order(&mut self, mut order: Order) -> OrderId {
         // Cross off as many shares as possible.
-        if !self.cross(order) {
+        if !self.cross(&mut order) {
             // Queue order if all shares not crossed off.
-            self.queue(order);
+            self.queue(&mut order);
         }
         let return_id = self.id;
         self.id += 1;
