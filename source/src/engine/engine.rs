@@ -51,13 +51,11 @@ impl Engine {
         let mut exec = order_1.clone();
         exec.size = min(order_1.size, order_2.size);
 
-        println!("{}, {}", order_1, order_2);
-
         // Call callback now
         log.push(exec.clone());
 
         exec.trader = order_2.trader.clone();
-        exec.side = !exec.side;
+        exec.side = exec.side ^ 1;
 
         // Callback for otherside of trade
         log.push(exec.clone());

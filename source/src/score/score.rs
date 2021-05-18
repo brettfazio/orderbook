@@ -16,18 +16,14 @@ fn feed(begin: usize, end: usize, engine: &mut Engine, flow: &mut Vec<Order>) {
 }
 
 pub fn playback(flow: &mut Vec<Order>) {
-    let replays = 200;
     let msg_batch_size = 10;
 
-    for _ in 0..replays {
-        let mut engine = Engine::new();
+    let mut engine = Engine::new();
+    
+    let mut batch = msg_batch_size;
+    while batch < flow.len() {
+        feed(batch - msg_batch_size, batch, &mut engine, flow);
 
-        let mut batch = msg_batch_size;
-        while batch < flow.len() {
-            feed(batch - msg_batch_size, batch, &mut engine, flow);
-
-            batch += msg_batch_size;
-        }
-
+        batch += msg_batch_size;
     }
 }

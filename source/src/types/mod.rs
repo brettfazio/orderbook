@@ -1,15 +1,14 @@
 use serde::{Serialize, Deserialize};
 use std::fmt;
 
-
 pub type OrderId = u64;
 
 pub type Price = u16;
 
 pub type Size = u64;
 
-pub type Side = bool;
-pub fn is_ask(s: Side) -> bool { return s; }
+pub type Side = u8;
+pub fn is_ask(s: Side) -> bool { return s == 1; }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Order {
@@ -35,7 +34,7 @@ impl Eq for Order { }
 
 impl fmt::Display for Order {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(${} from {}. {} {}x{})", self.symbol, self.trader, if self.side {"ask"} else {"bid"}, self.price, self.size)
+        write!(f, "(${} from {}. {} {}x{})", self.symbol, self.trader, if is_ask(self.side) {"ask"} else {"bid"}, self.price, self.size)
     }
 }
 
