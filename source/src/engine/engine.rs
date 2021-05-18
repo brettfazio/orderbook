@@ -119,7 +119,7 @@ impl Engine {
         order.size == 0
     }
 
-    fn queue(&mut self, order: &mut Order) {
+    fn queue(&mut self, order: Order) {
         let isask = is_ask(order.side);
         let book = if isask { &mut self.asks } else { &mut self.bids };
         let cross_test = if isask { Engine::priority_ask } else { Engine::priority_bid };
@@ -129,7 +129,7 @@ impl Engine {
             _ => book.len(),
         };
                             
-        let new_order = OrderIn { order: order.clone(), id: self.id };
+        let new_order = OrderIn { order: order, id: self.id };
         book.insert(insertion_index, new_order);
     }
 
@@ -137,7 +137,7 @@ impl Engine {
         // Cross off as many shares as possible.
         if !self.cross(&mut order) {
             // Queue order if all shares not crossed off.
-            self.queue(&mut order);
+            self.queue(order);
         }
         let return_id = self.id;
         self.id += 1;
