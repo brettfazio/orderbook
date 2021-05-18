@@ -74,7 +74,7 @@ impl Engine {
         exec.side = exec.side ^ 1;
 
         // Callback for otherside of trade
-        log.push(exec.clone());
+        log.push(exec);
     }
 
     fn trade(order: &mut Order, matched_order: &mut Order, log: &mut Vec<Execution>, should_log: bool) {
