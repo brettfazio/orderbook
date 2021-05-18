@@ -1,7 +1,10 @@
 mod types;
 mod engine;
 mod feed;
+mod score;
+
+use crate::score::score::get_score;
 
 fn main() {
-    println!("Hello, world!");
+    let feed = get_score();
 }
