@@ -3,8 +3,11 @@ mod engine;
 mod feed;
 mod score;
 
-use crate::score::score::get_score;
+use crate::score::score::playback;
+use crate::feed::feed::get_raw_feed;
 
 fn main() {
-    let feed = get_score();
+    let mut flow = get_raw_feed();
+
+    playback(&mut flow);
 }

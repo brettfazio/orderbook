@@ -2,7 +2,7 @@
 
 mod engine_tests {
 
-    use crate::types::types::{Order, OrderId, Execution};
+    use crate::types::{Order, OrderId, Execution};
     use crate::engine::engine::{Engine, OrderIn};
 
     struct TestState {

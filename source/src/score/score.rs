@@ -1,6 +1,3 @@
-use std::time::{Instant, Duration};
-
-use crate::feed::feed::{get_raw_feed};
 use crate::engine::engine::Engine;
 use crate::types::Order;
 
@@ -18,28 +15,19 @@ fn feed(begin: usize, end: usize, engine: &mut Engine, flow: &mut Vec<Order>) {
     }
 }
 
-pub fn get_score() -> u32 {
+pub fn playback(flow: &mut Vec<Order>) {
     let replays = 200;
     let msg_batch_size = 10;
 
-    let mut flow = get_raw_feed();
-
-    for replay in 0..replays {
+    for _ in 0..replays {
         let mut engine = Engine::new();
 
-        let mut batch = 0;
-        while batch < msg_batch_size {
-
-            let begin = Instant::now();
-
-            feed(batch - msg_batch_size, batch, &mut engine, &mut flow);
-
-            let elapsed = begin.elapsed();
+        let mut batch = msg_batch_size;
+        while batch < flow.len() {
+            feed(batch - msg_batch_size, batch, &mut engine, flow);
 
             batch += msg_batch_size;
         }
 
     }
-
-    0
 }

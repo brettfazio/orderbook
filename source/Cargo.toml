@@ -9,3 +9,9 @@ edition = "2018"
 [dependencies]
 csv = "1.1.6"
 serde = { version = "1.0.126", features = ["derive"] }
+criterion = "0.3"
+
+[[bench]]
+name = "score_benchmark"
+path = "src/score_benchmark.rs"
+harness = false

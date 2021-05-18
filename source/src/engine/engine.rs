@@ -51,6 +51,8 @@ impl Engine {
         let mut exec = order_1.clone();
         exec.size = min(order_1.size, order_2.size);
 
+        println!("{}, {}", order_1, order_2);
+
         // Call callback now
         log.push(exec.clone());
 
