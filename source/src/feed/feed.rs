@@ -16,7 +16,7 @@ pub fn get_raw_feed() -> Vec<Order> {
 
     for result in reader.deserialize() {
         let record: Order = match result {
-            Err(e) => continue,
+            Err(_e) => continue,
             Ok(f) => f,
         };
 
