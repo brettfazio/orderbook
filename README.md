@@ -6,6 +6,8 @@
 
 The baseline quantcup code from Quantcup.org is also provide (though it has been modified to use C++ instead of C).
 
+While there is no official leaderboard or competition like the original QuantCup, a way to participate here would be to fork the repo, edit `engine.rs` and try to get the best bench score possible.
+
 ## Modification
 
 `engine.rs` should be the main location for modification and optimization.
