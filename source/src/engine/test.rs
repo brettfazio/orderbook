@@ -15,7 +15,7 @@ mod engine_tests {
         fn new() -> TestState {
             TestState {
                 order_id: 0,
-                engine: Engine::new(),
+                engine: Engine::new_debug(),
             }
         }
 
