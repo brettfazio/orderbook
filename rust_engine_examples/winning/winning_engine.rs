@@ -4,109 +4,9 @@
 */
 
 use std::vec::Vec;
+use std::collections::{VecDeque, HashMap};
 use core::cmp::min;
 use crate::types::{Order, Price, OrderId, Execution, is_ask};
-
-// Self contained linked list code so the engine code can be dropped right into the orderbook
-// codebase.
-#[derive(Clone)]
-enum Link<T> {
-    None,
-    Tail { item: T },
-    Link { item: T, next: Box<Link<T>> }
-}
-
-#[derive(Clone)]
-struct Cursor<T> { 
-    curr: Link<T>
-}
-
-impl<T> Link<T> where T: Copy {
-    pub fn new() -> Self {
-        Self::None    
-    }
-    
-    pub fn pop(&mut self) -> Option<T> {
-        match self {
-            Self::None => None,
-            Self::Tail { item } => {
-              let item = *item;
-              self.to_none();
-              Some(item)
-            },
-            Self::Link { item, next } => {
-                let mut n = Box::new(Self::None);
-                let item = *item;
-                std::mem::swap(next, &mut n);
-                self.to_next(*n);
-                Some(item)
-            }
-        }
-    }
-    
-    pub fn push(&mut self, x: T) {
-        match self {
-           Self::None => self.to_tail(x),
-           Self::Tail { .. } => self.to_link(x),
-           Self::Link { next, .. } => next.push(x)
-        };
-    }
-    
-    fn to_none(&mut self) { *self = std::mem::replace(self, Link::None); }
-    
-    fn to_tail(&mut self, it: T) {
-        *self = match self {
-            Self::None => Self::Tail { item: it },
-            Self::Link { item:_, next:_ } => Self::Tail { item: it },
-            _ => panic!("Supplied value was not of correct type or variant.")
-        }
-    }
-    
-    fn to_next(&mut self, nxt: Link<T>) {
-        *self = nxt;
-    }
-    
-    fn to_link(&mut self, x: T) {
-        *self = match self {
-            Self::Tail { item } => { 
-                Self::Link { item: *item, next: Box::new(Self::Tail { item: x }) }
-            },
-            _ => { panic!("something went wrong"); }
-        };
-    }
-}
-
-impl<T> IntoIterator for Link<T> where T: Copy {
-    type Item = T;
-    type IntoIter = Cursor<T>;
-    
-    fn into_iter(self) -> Self::IntoIter {
-        Cursor {
-            curr: self
-        }
-    }
-}
-
-impl<T> Iterator for Cursor<T> where T: Copy {
-    type Item = T;
-    
-    fn next(&mut self) -> Option<T> {
-        let nxt = match self.curr {
-            Link::None => None,
-            Link::Tail { item } => {
-                self.curr = Link::None;
-                Some(item)
-            },
-            Link::Link { item, ref mut next } => {
-                let mut n = Box::new(Link::None);
-                std::mem::swap(next, &mut n);
-                self.curr = *n;
-                Some(item)
-            }
-        };
-        nxt
-    }
-}
 
 pub struct OrderIn {
     order: Order,
@@ -114,15 +14,14 @@ pub struct OrderIn {
 }
 
 struct PricePoint {
-    head: Link<Order>,
-    tail: Link<Order>,
+    items: VecDeque<OrderId>
 }
 
 pub struct Engine {
     ask_min: Price,
     bid_max: Price,
-    book_entries: Vec<OrderIn>,
-    price_points: [PricePoint; Price::max_value()+1],
+    book_entries: HashMap<OrderId, OrderIn>,
+    price_points: Vec<PricePoint>,
     id: OrderId,
     pub execution_log: Vec<Execution>,
     should_log: bool
@@ -130,48 +29,34 @@ pub struct Engine {
 
 impl Engine {
 
-    pub fn new() -> Engine {
+    fn _new(debug: bool) -> Engine {
         let max_orders = 1010000;
+
+        let mut pps: Vec<PricePoint> = Vec::with_capacity((Price::max_value() as usize) + 1);
+
+        let mut idx = 0;
+        while idx < (Price::max_value() as usize) + 1 {
+            pps.push(PricePoint{ items: VecDeque::new() });
+            idx += 1;
+        }
 
         Engine {
             ask_min: 0,
             bid_max: 0,
-            book_entries: Vec::with_capacity(max_orders as usize),
-            price_points: [{ head: Link::new(), tail: Link::new() }; Price::max_value()+1],
+            book_entries: HashMap::new(),
+            price_points: pps,
             id: 1,
             execution_log: Vec::new(),
-            should_log: false
+            should_log: debug
         }
+    }
+
+    pub fn new() -> Engine {
+        Engine::_new(false)
     }
 
     pub fn new_debug() -> Engine {
-        Engine {
-            ask_min: Price::max_value(),
-            bid_max: 1,
-            book_entries: Vec::with_capacity(max_orders as usize),
-            price_points: [{ head: Link::new(), tail: Link::new() }; Price::max_value()+1],
-            id: 1,
-            execution_log: Vec::new(),
-            should_log: false
-        }
-    }
-    
-    // Helpers for cross
-    fn hit_ask(bid: Price, ask: Price) -> bool {
-        return bid >= ask;
-    }
-
-    fn hit_bid(ask: Price, bid: Price) -> bool {
-        return ask <= bid;
-    }
-
-    // Helpers for queue
-    fn priority_ask(ask_new: Price, ask_old: Price) -> bool {
-        return ask_new < ask_old;
-    }
-
-    fn priority_bid(bid_new: Price, bid_old: Price) -> bool {
-        return bid_new > bid_old;
+        Engine::_new(true)
     }
 
     // Original implementation used an undefined header function in the engine.h 
@@ -193,6 +78,9 @@ impl Engine {
     }
 
     fn trade(order: &mut Order, matched_order: &mut Order, log: &mut Vec<Execution>, should_log: bool) {
+        if matched_order.size == 0 {
+            return;
+        }
         if should_log {
             // Send to execution report now.
             Engine::send_execution(&order.clone(), &matched_order.clone(), log);
@@ -212,59 +100,135 @@ impl Engine {
         }
     }
 
-    fn cross(&mut self, order: &mut Order) -> bool {
-        let isask = is_ask(order.side);
-        let book = if isask { &mut self.bids } else { &mut self.asks };
-        let cross_test = if isask { Engine::hit_bid } else { Engine::hit_ask };
-        let log = &mut self.execution_log;
+    fn queue(&mut self, order: Order) -> OrderId {
+        // Add to price point.
+        self.price_points[order.price as usize].items.push_back(self.id);
+        // Add to book entries.
+        self.book_entries.insert(self.id, OrderIn { order: order, id: self.id });
 
-        for matched_order in book.iter_mut() {
-            if order.size == 0 {
-                break;
-            }
-            if !cross_test(order.price, matched_order.order.price) {
-                break;
-            }
-
-            Engine::trade(order, &mut matched_order.order, log, self.should_log);            
-        }
-
-        book.retain(|x| x.order.size > 0);
-
-        order.size == 0
-    }
-
-    fn queue(&mut self, order: Order) {
-        let isask = is_ask(order.side);
-        let book = if isask { &mut self.asks } else { &mut self.bids };
-        let cross_test = if isask { Engine::priority_ask } else { Engine::priority_bid };
-
-        let insertion_index = match book.iter().enumerate().find(|(_index, ele)| cross_test(order.price, ele.order.price)) {
-            Some((a, _)) => a,
-            _ => book.len(),
-        };
-                            
-        let new_order = OrderIn { order: order, id: self.id };
-        book.insert(insertion_index, new_order);
+        // Return new order number
+        let return_id = self.id;
+        self.id += 1;
+        return_id
     }
 
     pub fn limit_order(&mut self, mut order: Order) -> OrderId {
         // Cross off as many shares as possible.
         if is_ask(order.side) {
             if order.price >= self.ask_min {
-                
+                let mut pp_entry = &mut self.price_points[self.ask_min as usize];
+
+                loop {
+                    let mut entries = &mut pp_entry.items;
+
+                    // Go over entries
+                    for item_id in entries.iter_mut() {
+                        let mut item = &mut self.book_entries.get_mut(&*item_id).unwrap().order;
+                        Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
+
+                        if order.size == 0 {
+                            break;
+                        }
+                    }
+                    // Remove
+                    loop {
+                        match entries.front() {
+                            Some(x) => {
+                                if self.book_entries.get(&*x).unwrap().order.size == 0 {
+                                    entries.pop_front();
+                                }else {
+                                    break;
+                                }
+                            }
+                            None => break
+                        }
+                    }
+                    
+                    if order.size == 0 {
+                        let return_id = self.id;
+                        self.id += 1;
+                        return return_id;
+                    }
+
+                    // All orders at the current price point.
+                    self.ask_min += 1;
+                    if order.price < self.ask_min {
+                        break;
+                    }
+                    pp_entry = &mut self.price_points[self.ask_min as usize];
+                }
             }
-        }
-        else {
 
+            // Adjust potential max
+            if self.bid_max < order.price {
+                self.bid_max = order.price;
+            }
+            // Queue order
+            let new_id = self.queue(order);
+            return new_id;
         }
+        else { // sell
+            if order.price <= self.bid_max {
+                let mut pp_entry = &mut self.price_points[self.bid_max as usize];
 
-        5
+                loop {
+                    let mut entries = &mut pp_entry.items;
+
+                    // Go over entries
+                    for item_id in entries.iter_mut() {
+                        let mut item = &mut self.book_entries.get_mut(&*item_id).unwrap().order;
+                        Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
+
+                        if order.size == 0 {
+                            break;
+                        }
+                    }
+                    // Remove
+                    loop {
+                        match entries.front() {
+                            Some(x) => {
+                                if self.book_entries.get(&*x).unwrap().order.size == 0 {
+                                    entries.pop_front();
+                                }else {
+                                    break;
+                                }
+                            }
+                            None => break
+                        }
+                    }
+                    
+                    if order.size == 0 {
+                        let return_id = self.id;
+                        self.id += 1;
+                        return return_id;
+                    }
+
+                    // All orders at the current price point.
+                    self.bid_max -= 1;
+                    if order.price > self.bid_max {
+                        break;
+                    }
+                    pp_entry = &mut self.price_points[self.ask_min as usize];
+                }
+
+            }
+
+            // Adjust potential max
+            if self.ask_min > order.price {
+                self.ask_min = order.price;
+            }
+            // Queue order
+            let new_id = self.queue(order);
+            // Return new order number
+            return new_id;
+        }
     }
 
     pub fn cancel(&mut self, id: OrderId) {
-        self.asks.retain(|x| x.id != id);
-        self.bids.retain(|x| x.id != id);
+        match self.book_entries.get_mut(&id) {
+            Some(x) => x.order.size = 0,
+            None => return,
+        }
     }
 
 }
