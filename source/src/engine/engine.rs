@@ -9,7 +9,7 @@ use crate::types::{Order, Price, OrderId, Execution, is_ask};
 
 // Self contained linked list code so the engine code can be dropped right into the orderbook
 // codebase.
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 enum Link<T> {
     None,
     Tail { item: T },
@@ -122,7 +122,7 @@ pub struct Engine {
     ask_min: Price,
     bid_max: Price,
     book_entries: Vec<OrderIn>,
-    price_points: [PricePoint; (Price::max_value() as usize) + 1],
+    price_points: Vec<PricePoint>,
     id: OrderId,
     pub execution_log: Vec<Execution>,
     should_log: bool
@@ -133,11 +133,19 @@ impl Engine {
     fn _new(debug: bool) -> Engine {
         let max_orders = 1010000;
 
+        let mut pps: Vec<PricePoint> = Vec::with_capacity((Price::max_value() as usize) + 1);
+
+        let mut idx = 0;
+        while idx < (Price::max_value() as usize) + 1 {
+            pps.push(PricePoint{ head: Link::None, tail: Link::None });
+            idx += 1;
+        }
+
         Engine {
             ask_min: 0,
             bid_max: 0,
             book_entries: Vec::with_capacity(max_orders as usize),
-            price_points: [PricePoint{ head: Link::None, tail: Link::None }; (Price::max_value() as usize) + 1],
+            price_points: pps,
             id: 1,
             execution_log: Vec::new(),
             should_log: debug
