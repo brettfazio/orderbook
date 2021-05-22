@@ -1,5 +1,6 @@
 /*
     Reimplementation of the winning QuantCup 1 implementation
+    References in other langauges:
     https://gist.github.com/druska/d6ce3f2bac74db08ee9007cdf98106ef
     https://github.com/rdingwall/go-quantcup
 */
