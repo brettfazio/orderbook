@@ -4,7 +4,7 @@
 */
 
 use std::vec::Vec;
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 use core::cmp::min;
 use crate::types::{Order, Price, OrderId, Execution, is_ask};
 
@@ -20,7 +20,7 @@ struct PricePoint {
 pub struct Engine {
     ask_min: Price,
     bid_max: Price,
-    book_entries: Vec<OrderIn>,
+    book_entries: HashMap<OrderId, OrderIn>,
     price_points: Vec<PricePoint>,
     id: OrderId,
     pub execution_log: Vec<Execution>,
@@ -43,7 +43,7 @@ impl Engine {
         Engine {
             ask_min: 0,
             bid_max: 0,
-            book_entries: Vec::with_capacity(max_orders as usize),
+            book_entries: HashMap::new(),
             price_points: pps,
             id: 1,
             execution_log: Vec::new(),
@@ -123,7 +123,7 @@ impl Engine {
         // Add to price point.
         self.price_points[order.price as usize].items.push_back(self.id);
         // Add to book entries.
-        self.book_entries[self.id as usize] = OrderIn { order: order, id: self.id };
+        self.book_entries.insert(self.id, OrderIn { order: order, id: self.id });
     }
 
     pub fn limit_order(&mut self, mut order: Order) -> OrderId {
@@ -137,9 +137,9 @@ impl Engine {
 
                     // Go over entries
                     for item_id in entries.iter_mut() {
-                        let mut item = &mut self.book_entries[*item_id as usize].order;
+                        let mut item = &mut self.book_entries.get_mut(&*item_id).unwrap().order;
                         if item.size < order.size {
-                            Engine::trade(&mut order, item, &mut self.execution_log, self.should_log);
+                            Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
 
                             if order.size == 0 {
                                 break;
@@ -150,7 +150,7 @@ impl Engine {
                     loop {
                         match entries.front() {
                             Some(x) => {
-                                if self.book_entries[*x as usize].order.size == 0 {
+                                if self.book_entries.get(&*x).unwrap().order.size == 0 {
                                     entries.pop_front();
                                 }else {
                                     break;
@@ -194,9 +194,9 @@ impl Engine {
 
                     // Go over entries
                     for item_id in entries.iter_mut() {
-                        let mut item = &mut self.book_entries[*item_id as usize].order;
+                        let mut item = &mut self.book_entries.get_mut(&*item_id).unwrap().order;
                         if item.size < order.size {
-                            Engine::trade(&mut order, item, &mut self.execution_log, self.should_log);
+                            Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
 
                             if order.size == 0 {
                                 break;
@@ -207,7 +207,7 @@ impl Engine {
                     loop {
                         match entries.front() {
                             Some(x) => {
-                                if self.book_entries[*x as usize].order.size == 0 {
+                                if self.book_entries.get(&*x).unwrap().order.size == 0 {
                                     entries.pop_front();
                                 }else {
                                     break;
@@ -250,7 +250,7 @@ impl Engine {
     }
 
     pub fn cancel(&mut self, id: OrderId) {
-        self.book_entries[id as usize].order.size = 0;
+        self.book_entries.get_mut(&id).unwrap().order.size = 0;
     }
 
 }
