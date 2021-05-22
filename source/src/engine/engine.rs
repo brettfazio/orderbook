@@ -185,15 +185,72 @@ impl Engine {
                 return return_id;
             }
         }
-        else {
+        else { // sell
+            if order.price <= self.bid_max {
+                let pp_entry = &mut self.price_points[self.bid_max as usize];
 
+                loop {
+                    let mut entries = &mut pp_entry.items;
+
+                    // Go over entries
+                    for item_id in entries.iter_mut() {
+                        let mut item = &mut self.book_entries[*item_id as usize].order;
+                        if item.size < order.size {
+                            Engine::trade(&mut order, item, &mut self.execution_log, self.should_log);
+
+                            if order.size == 0 {
+                                break;
+                            }
+                        }
+                    }
+                    // Remove
+                    loop {
+                        match entries.front() {
+                            Some(x) => {
+                                if self.book_entries[*x as usize].order.size == 0 {
+                                    entries.pop_front();
+                                }else {
+                                    break;
+                                }
+                            }
+                            None => break
+                        }
+                    }
+                    
+                    if order.size == 0 {
+                        let return_id = self.id;
+                        self.id += 1;
+                        return return_id;
+                    }
+
+                    // All orders at the current price point.
+                    self.bid_max -= 1;
+                    if order.price > self.bid_max {
+                        break;
+                    }
+                }
+
+                // Adjust potential max
+                if self.ask_min > order.price {
+                    self.ask_min = order.price;
+                }
+                // Queue order
+                self.queue(order);
+                // Return new order number
+                let return_id = self.id;
+                self.id += 1;
+                return return_id;
+            }
         }
 
-        5
+        // Implement this return properly.
+        let return_id = self.id;
+        self.id += 1;
+        return return_id;
     }
 
     pub fn cancel(&mut self, id: OrderId) {
-        self.
+        self.book_entries[id as usize].order.size = 0;
     }
 
 }
