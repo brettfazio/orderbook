@@ -96,6 +96,9 @@ impl Engine {
     }
 
     fn trade(order: &mut Order, matched_order: &mut Order, log: &mut Vec<Execution>, should_log: bool) {
+        if matched_order.size == 0 {
+            return;
+        }
         if should_log {
             // Send to execution report now.
             Engine::send_execution(&order.clone(), &matched_order.clone(), log);
@@ -138,12 +141,10 @@ impl Engine {
                     // Go over entries
                     for item_id in entries.iter_mut() {
                         let mut item = &mut self.book_entries.get_mut(&*item_id).unwrap().order;
-                        if item.size < order.size {
-                            Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
+                        Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
 
-                            if order.size == 0 {
-                                break;
-                            }
+                        if order.size == 0 {
+                            break;
                         }
                     }
                     // Remove
@@ -172,18 +173,18 @@ impl Engine {
                         break;
                     }
                 }
-
-                // Adjust potential max
-                if self.bid_max < order.price {
-                    self.bid_max = order.price;
-                }
-                // Queue order
-                self.queue(order);
-                // Return new order number
-                let return_id = self.id;
-                self.id += 1;
-                return return_id;
             }
+
+            // Adjust potential max
+            if self.bid_max < order.price {
+                self.bid_max = order.price;
+            }
+            // Queue order
+            self.queue(order);
+            // Return new order number
+            let return_id = self.id;
+            self.id += 1;
+            return return_id;
         }
         else { // sell
             if order.price <= self.bid_max {
@@ -195,12 +196,10 @@ impl Engine {
                     // Go over entries
                     for item_id in entries.iter_mut() {
                         let mut item = &mut self.book_entries.get_mut(&*item_id).unwrap().order;
-                        if item.size < order.size {
-                            Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
+                        Engine::trade(&mut order, &mut item, &mut self.execution_log, self.should_log);
 
-                            if order.size == 0 {
-                                break;
-                            }
+                        if order.size == 0 {
+                            break;
                         }
                     }
                     // Remove
@@ -230,27 +229,26 @@ impl Engine {
                     }
                 }
 
-                // Adjust potential max
-                if self.ask_min > order.price {
-                    self.ask_min = order.price;
-                }
-                // Queue order
-                self.queue(order);
-                // Return new order number
-                let return_id = self.id;
-                self.id += 1;
-                return return_id;
             }
-        }
 
-        // Implement this return properly.
-        let return_id = self.id;
-        self.id += 1;
-        return return_id;
+            // Adjust potential max
+            if self.ask_min > order.price {
+                self.ask_min = order.price;
+            }
+            // Queue order
+            self.queue(order);
+            // Return new order number
+            let return_id = self.id;
+            self.id += 1;
+            return return_id;
+        }
     }
 
     pub fn cancel(&mut self, id: OrderId) {
-        self.book_entries.get_mut(&id).unwrap().order.size = 0;
+        match self.book_entries.get_mut(&id) {
+            Some(x) => x.order.size = 0,
+            None => return,
+        }
     }
 
 }
