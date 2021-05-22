@@ -4,110 +4,9 @@
 */
 
 use std::vec::Vec;
+use std::collections::VecDeque;
 use core::cmp::min;
 use crate::types::{Order, Price, OrderId, Execution, is_ask};
-
-// Self contained linked list code so the engine code can be dropped right into the orderbook
-// codebase.
-// https://medium.com/swlh/implementing-a-linked-list-in-rust-c25e460c3676
-#[derive(Clone)]
-enum Link<T> {
-    None,
-    Tail { item: T },
-    Link { item: T, next: Box<Link<T>> }
-}
-
-#[derive(Clone)]
-struct Cursor<T> { 
-    curr: Link<T>
-}
-
-impl<T> Link<T> where T: Copy {
-    pub fn new() -> Self {
-        Self::None    
-    }
-    
-    pub fn pop(&mut self) -> Option<T> {
-        match self {
-            Self::None => None,
-            Self::Tail { item } => {
-              let item = *item;
-              self.to_none();
-              Some(item)
-            },
-            Self::Link { item, next } => {
-                let mut n = Box::new(Self::None);
-                let item = *item;
-                std::mem::swap(next, &mut n);
-                self.to_next(*n);
-                Some(item)
-            }
-        }
-    }
-    
-    pub fn push(&mut self, x: T) {
-        match self {
-           Self::None => self.to_tail(x),
-           Self::Tail { .. } => self.to_link(x),
-           Self::Link { next, .. } => next.push(x)
-        };
-    }
-    
-    fn to_none(&mut self) { *self = std::mem::replace(self, Link::None); }
-    
-    fn to_tail(&mut self, it: T) {
-        *self = match self {
-            Self::None => Self::Tail { item: it },
-            Self::Link { item:_, next:_ } => Self::Tail { item: it },
-            _ => panic!("Supplied value was not of correct type or variant.")
-        }
-    }
-    
-    fn to_next(&mut self, nxt: Link<T>) {
-        *self = nxt;
-    }
-    
-    fn to_link(&mut self, x: T) {
-        *self = match self {
-            Self::Tail { item } => { 
-                Self::Link { item: *item, next: Box::new(Self::Tail { item: x }) }
-            },
-            _ => { panic!("something went wrong"); }
-        };
-    }
-}
-
-impl<T> IntoIterator for Link<T> where T: Copy {
-    type Item = T;
-    type IntoIter = Cursor<T>;
-    
-    fn into_iter(self) -> Self::IntoIter {
-        Cursor {
-            curr: self
-        }
-    }
-}
-
-impl<T> Iterator for Cursor<T> where T: Copy {
-    type Item = T;
-    
-    fn next(&mut self) -> Option<T> {
-        let nxt = match self.curr {
-            Link::None => None,
-            Link::Tail { item } => {
-                self.curr = Link::None;
-                Some(item)
-            },
-            Link::Link { item, ref mut next } => {
-                let mut n = Box::new(Link::None);
-                std::mem::swap(next, &mut n);
-                self.curr = *n;
-                Some(item)
-            }
-        };
-        nxt
-    }
-}
 
 pub struct OrderIn {
     order: Order,
@@ -115,8 +14,7 @@ pub struct OrderIn {
 }
 
 struct PricePoint {
-    head: Link<Order>,
-    tail: Link<Order>,
+    items: VecDeque<OrderId>
 }
 
 pub struct Engine {
@@ -138,7 +36,7 @@ impl Engine {
 
         let mut idx = 0;
         while idx < (Price::max_value() as usize) + 1 {
-            pps.push(PricePoint{ head: Link::None, tail: Link::None });
+            pps.push(PricePoint{ items: VecDeque::new() });
             idx += 1;
         }
 
@@ -222,22 +120,69 @@ impl Engine {
     }
 
     fn queue(&mut self, order: Order) {
-
+        // Add to price point.
+        self.price_points[order.price as usize].items.push_back(self.id);
+        // Add to book entries.
+        self.book_entries[self.id as usize] = OrderIn { order: order, id: self.id };
     }
 
     pub fn limit_order(&mut self, mut order: Order) -> OrderId {
         // Cross off as many shares as possible.
         if is_ask(order.side) {
             if order.price >= self.ask_min {
-                let pp_entry = &self.price_points[self.ask_min as usize];
+                let pp_entry = &mut self.price_points[self.ask_min as usize];
 
                 loop {
-                    let book_entry = &pp_entry.head;
+                    let mut entries = &mut pp_entry.items;
 
-                    while book_entry != Link::None {
+                    // Go over entries
+                    for item_id in entries.iter_mut() {
+                        let mut item = &mut self.book_entries[*item_id as usize].order;
+                        if item.size < order.size {
+                            Engine::trade(&mut order, item, &mut self.execution_log, self.should_log);
 
+                            if order.size == 0 {
+                                break;
+                            }
+                        }
+                    }
+                    // Remove
+                    loop {
+                        match entries.front() {
+                            Some(x) => {
+                                if self.book_entries[*x as usize].order.size == 0 {
+                                    entries.pop_front();
+                                }else {
+                                    break;
+                                }
+                            }
+                            None => break
+                        }
+                    }
+                    
+                    if order.size == 0 {
+                        let return_id = self.id;
+                        self.id += 1;
+                        return return_id;
+                    }
+
+                    // All orders at the current price point.
+                    self.ask_min += 1;
+                    if order.price < self.ask_min {
+                        break;
                     }
                 }
+
+                // Adjust potential max
+                if self.bid_max < order.price {
+                    self.bid_max = order.price;
+                }
+                // Queue order
+                self.queue(order);
+                // Return new order number
+                let return_id = self.id;
+                self.id += 1;
+                return return_id;
             }
         }
         else {
@@ -248,7 +193,7 @@ impl Engine {
     }
 
     pub fn cancel(&mut self, id: OrderId) {
-        
+        self.
     }
 
 }
