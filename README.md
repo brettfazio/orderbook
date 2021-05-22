@@ -32,3 +32,7 @@ cargo bench
 ```
 
 This will benchmark your code using the `score_feed.csv` as the order flow and the matching engine implemented in `engine.rs`.
+
+## Contribution
+
+PRs are welcome either adding additional novel matching engines to the examples or improving the base running/scoring code itself. 
