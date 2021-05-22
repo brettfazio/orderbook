@@ -9,6 +9,7 @@ use crate::types::{Order, Price, OrderId, Execution, is_ask};
 
 // Self contained linked list code so the engine code can be dropped right into the orderbook
 // codebase.
+// https://medium.com/swlh/implementing-a-linked-list-in-rust-c25e460c3676
 #[derive(Clone)]
 enum Link<T> {
     None,
@@ -228,7 +229,15 @@ impl Engine {
         // Cross off as many shares as possible.
         if is_ask(order.side) {
             if order.price >= self.ask_min {
-                
+                let pp_entry = &self.price_points[self.ask_min as usize];
+
+                loop {
+                    let book_entry = &pp_entry.head;
+
+                    while book_entry != Link::None {
+
+                    }
+                }
             }
         }
         else {
