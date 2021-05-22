@@ -58,24 +58,6 @@ impl Engine {
     pub fn new_debug() -> Engine {
         Engine::_new(true)
     }
-    
-    // Helpers for cross
-    fn hit_ask(bid: Price, ask: Price) -> bool {
-        return bid >= ask;
-    }
-
-    fn hit_bid(ask: Price, bid: Price) -> bool {
-        return ask <= bid;
-    }
-
-    // Helpers for queue
-    fn priority_ask(ask_new: Price, ask_old: Price) -> bool {
-        return ask_new < ask_old;
-    }
-
-    fn priority_bid(bid_new: Price, bid_old: Price) -> bool {
-        return bid_new > bid_old;
-    }
 
     // Original implementation used an undefined header function in the engine.h 
     // to be implemented should you want the backlog of orders to confirm the engine is valid.
@@ -118,22 +100,23 @@ impl Engine {
         }
     }
 
-    fn cross(&mut self, order: &mut Order) -> bool {
-        true
-    }
-
-    fn queue(&mut self, order: Order) {
+    fn queue(&mut self, order: Order) -> OrderId {
         // Add to price point.
         self.price_points[order.price as usize].items.push_back(self.id);
         // Add to book entries.
         self.book_entries.insert(self.id, OrderIn { order: order, id: self.id });
+
+        // Return new order number
+        let return_id = self.id;
+        self.id += 1;
+        return_id
     }
 
     pub fn limit_order(&mut self, mut order: Order) -> OrderId {
         // Cross off as many shares as possible.
         if is_ask(order.side) {
             if order.price >= self.ask_min {
-                let pp_entry = &mut self.price_points[self.ask_min as usize];
+                let mut pp_entry = &mut self.price_points[self.ask_min as usize];
 
                 loop {
                     let mut entries = &mut pp_entry.items;
@@ -172,6 +155,7 @@ impl Engine {
                     if order.price < self.ask_min {
                         break;
                     }
+                    pp_entry = &mut self.price_points[self.ask_min as usize];
                 }
             }
 
@@ -180,15 +164,12 @@ impl Engine {
                 self.bid_max = order.price;
             }
             // Queue order
-            self.queue(order);
-            // Return new order number
-            let return_id = self.id;
-            self.id += 1;
-            return return_id;
+            let new_id = self.queue(order);
+            return new_id;
         }
         else { // sell
             if order.price <= self.bid_max {
-                let pp_entry = &mut self.price_points[self.bid_max as usize];
+                let mut pp_entry = &mut self.price_points[self.bid_max as usize];
 
                 loop {
                     let mut entries = &mut pp_entry.items;
@@ -227,6 +208,7 @@ impl Engine {
                     if order.price > self.bid_max {
                         break;
                     }
+                    pp_entry = &mut self.price_points[self.ask_min as usize];
                 }
 
             }
@@ -236,11 +218,9 @@ impl Engine {
                 self.ask_min = order.price;
             }
             // Queue order
-            self.queue(order);
+            let new_id = self.queue(order);
             // Return new order number
-            let return_id = self.id;
-            self.id += 1;
-            return return_id;
+            return new_id;
         }
     }
 
